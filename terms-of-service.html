@@ -45,6 +45,37 @@
       max-width: 560px;
       color: rgba(31, 41, 51, 0.78);
     }
+    .language-switcher {
+      margin-top: clamp(1rem, 3vw, 1.5rem);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      background-color: var(--card-bg);
+      box-shadow: 0 14px 28px -26px var(--shadow-color);
+    }
+    .language-switcher button {
+      appearance: none;
+      border: none;
+      background: none;
+      padding: 0.45rem 1.1rem;
+      border-radius: 999px;
+      font: inherit;
+      color: var(--heading-color);
+      cursor: pointer;
+      transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .language-switcher button.is-active {
+      background-color: var(--accent-color);
+      color: #ffffff;
+      box-shadow: 0 12px 22px -20px var(--shadow-color);
+    }
+    .language-switcher button:focus-visible {
+      outline: 2px solid var(--accent-color);
+      outline-offset: 2px;
+    }
     .content-block {
       background-color: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -107,11 +138,17 @@
 <body>
   <main>
     <header>
-      <h1>Terms of Service / 用户协议</h1>
-      <p>This page describes the Pass Driving Test Terms of Service in both English and Simplified Chinese.</p>
+      <h1>
+        <span data-lang-text="en">Terms of Service</span>
+        <span data-lang-text="zh">用户协议</span>
+      </h1>
+      <div class="language-switcher" role="group" aria-label="Language selector">
+        <button type="button" data-lang-button="en" aria-pressed="false">English</button>
+        <button type="button" data-lang-button="zh" aria-pressed="false">中文</button>
+      </div>
     </header>
 
-    <section class="content-block" aria-labelledby="tos-en">
+    <section class="content-block" aria-labelledby="tos-en" data-lang-section="en">
       <h2 id="tos-en">Terms of Service</h2>
       <ol>
         <li>
@@ -206,7 +243,7 @@
       </ol>
     </section>
 
-    <section class="content-block" id="tos-zh" lang="zh-Hans" aria-labelledby="tos-zh-heading">
+    <section class="content-block" id="tos-zh" lang="zh-Hans" aria-labelledby="tos-zh-heading" data-lang-section="zh">
       <h2 id="tos-zh-heading">用户协议</h2>
       <ol>
         <li>
@@ -301,5 +338,60 @@
       </ol>
     </section>
   </main>
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const allSections = document.querySelectorAll("[data-lang-section]");
+      const textNodes = document.querySelectorAll("[data-lang-text]");
+      const buttons = document.querySelectorAll("[data-lang-button]");
+
+      const normalizeLang = (value) => {
+        if (!value) return null;
+        const lower = value.toLowerCase();
+        if (lower.startsWith("zh")) return "zh";
+        if (lower.startsWith("en")) return "en";
+        return null;
+      };
+
+      let activeLang = normalizeLang(params.get("lang")) || "en";
+
+      const applyLanguage = (lang) => {
+        document.documentElement.lang = lang === "zh" ? "zh-Hans" : "en";
+        allSections.forEach((section) => {
+          section.hidden = section.dataset.langSection !== lang;
+        });
+        textNodes.forEach((node) => {
+          node.hidden = node.dataset.langText !== lang;
+        });
+        buttons.forEach((btn) => {
+          const btnLang = normalizeLang(btn.dataset.langButton);
+          const isActive = btnLang === lang;
+          btn.classList.toggle("is-active", isActive);
+          btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+      };
+
+      const syncUrl = (lang) => {
+        if (normalizeLang(params.get("lang")) === lang) return;
+        params.set("lang", lang);
+        const query = params.toString();
+        const newUrl = query ? `${window.location.pathname}?${query}${window.location.hash}` : `${window.location.pathname}${window.location.hash}`;
+        window.history.replaceState({}, "", newUrl);
+      };
+
+      applyLanguage(activeLang);
+      syncUrl(activeLang);
+
+      buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const nextLang = normalizeLang(btn.dataset.langButton);
+          if (!nextLang || nextLang === activeLang) return;
+          activeLang = nextLang;
+          applyLanguage(activeLang);
+          syncUrl(activeLang);
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
